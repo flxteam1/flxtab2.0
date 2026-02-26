@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hello! FLX</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script>
+        const wallpapers = [
+            'bizhi.png',
+            'https://bing.img.run/uhd.php',
+            'https://bing.img.run/rand_uhd.php',
+            'https://t.alcy.cc/fj',
+            'https://t.alcy.cc/ycy',
+            'https://t.alcy.cc/ysz',
+            'https://t.alcy.cc/pc',
+            'https://wp.upx8.com/api.php',
+            'https://t.alcy.cc/moez'
+        ];
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            const wallpaperBg = document.getElementById('wallpaper-bg');
+            const wallpaperSwitcher = document.createElement('div');
+            wallpaperSwitcher.id = 'wallpaper-switcher';
+            
+            wallpapers.forEach((wp, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'wallpaper-btn';
+                btn.textContent = index + 1;
+                btn.onclick = () => {
+                    wallpaperBg.style.backgroundImage = `url('${wp}')`;
+                    if (currentUser) {
+                        saveSetting('wallpaper_url', wp);
+                    }
+                };
+                wallpaperSwitcher.appendChild(btn);
+            });
+            
+            document.body.appendChild(wallpaperSwitcher);
+        });
+    </script>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>F</text></svg>">
+    <style>
+        /* 鸿蒙字体引入 */
+        @font-face {
+            font-family: 'HarmonyOS Sans SC';
+            src: url('./fonts/HarmonyOS_Sans_SC_Regular.ttf') format('truetype'); 
+            font-weight: normal;
+            font-style: normal;
+        }
+
+        @font-face {
+            font-family: 'HarmonyOS Sans SC';
+            src: url('./fonts/HarmonyOS_Sans_SC_Bold.ttf') format('truetype'); 
+            font-weight: bold;
+            font-style: normal;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans SC', sans-serif; /* 优先使用鸿蒙字体 */
+            color: #cccccc; 
+            overflow-y: auto; 
+
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        .hidden { display: none !important; }
+
+        #wallpaper-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            z-index: -1;
+            background-image: url('bizhi.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: background-image 0.5s ease-in-out;
+        }
+        
+        #wallpaper-switcher {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 100;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .wallpaper-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+            background-color: rgba(0,0,0,0.3);
+            backdrop-filter: blur(5px);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .wallpaper-btn:hover {
+            background-color: rgba(0,0,0,0.5);
+            transform: scale(1.1);
+        }
+
+        #auth-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 101;
+        }
+
+        #flx-mail-link {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 101;
+        }
+
+        #flx-mail-link a {
+            color: #e0e0e0; 
+            text-decoration: none;
+            font-weight: bold;
+            font-size: 14px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            transition: all 0.2s;
+        }
+
+        #flx-mail-link a:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        #login-button, #logout-button {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            background-color: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(5px);
+            font-size: 14px;
+        }
+        #login-button:hover, #logout-button:hover {
+            background-color: rgba(255, 255, 255, 0.4);
+            transform: translateY(-2px);
+        }
+
+        #email-auth-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            margin-top: 10px;
+        }
+
+        #email-input,
+        #otp-input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        #send-otp-button,
+        #verify-otp-button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s ease;
+        }
+
+        #send-otp-button:hover,
+        #verify-otp-button:hover {
+            background-color: #0056b3;
+        }
+
+        #user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        #user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        #user-name {
+            color: white;
+            font-weight: bold;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+        }
+        
+        .search-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 70vh; /* 让搜索区域占据大部分视口高度 */
+        }
+
+        h1 {
+            font-size: 3rem; /* 稍微减小字体大小 */
+            color: white;
+            margin-top: 0;
+            margin-bottom: 0.5rem; /* 调整 h1 和搜索框之间的距离 */
+            text-shadow: 0px 0px 6px rgba(0, 0, 0, 0.7); /* 调整阴影 */
+        }
+
+        .search-container {
+            display: flex; 
+            align-items: center;
+            background: rgba(0, 0, 0, 0.25);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 28px;
+            padding: 5px;
+            width: 60%;
+            max-width: 700px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.2s ease-in-out;
+            margin: 1rem auto 0 auto; 
+            z-index: 100;
+        }
+
+        .search-container:hover {
+            background: rgba(0, 0, 0, 0.35);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        .search-engine-select {
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 8px 12px;
+            padding-right: 25px; 
+            outline: none;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+            font-size: 14px;
+            font-family: inherit;
+            cursor: pointer;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.4-5.4-13z%22%2F%3E%3C%2Fsvg%3E');
+            background-repeat: no-repeat;
+            background-position: right 8px top 50%;
+            background-size: .6em auto;
+        }
+
+        .search-engine-select option {
+            background: rgba(30, 30, 30, 0.9);
+            color: white;
+            padding: 6px 10px; 
+            font-size: 14px;
+        }
+
+        .search-engine-select optgroup {
+            font-weight: bold;
+            font-style: italic;
+            color: #a0a0a0;
+        }
+
+        .custom-select-wrapper {
+            position: relative;
+            user-select: none;
+            height: 100%;
+        }
+
+        .custom-select-trigger {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 15px;
+            height: 100%;
+            cursor: pointer;
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .custom-select-trigger #selected-engine-icon {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
+
+        .custom-select-trigger .arrow {
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 5px solid white;
+            transition: transform 0.2s ease;
+        }
+
+        .custom-select-wrapper.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .custom-options {
+            position: absolute;
+            top: calc(100% + 5px); 
+            z-index: 1000; 
+            left: 0;
+            right: 0;
+            background: rgba(30, 30, 30, 0.95); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.15); 
+            border-radius: 15px; 
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4); 
+            max-height: 250px; 
+            overflow-y: auto;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(10px); 
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s;
+        }
+
+        .custom-select-wrapper.open .custom-options {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+
+        .custom-options::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .custom-options::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+        }
+
+        .custom-options::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .custom-options::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .custom-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .custom-option:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .custom-option img {
+            width: 18px;
+            height: 18px;
+            margin-right: 12px;
+        }
+
+        .custom-option span {
+            color: white;
+            font-size: 15px;
+        }
+
+        .custom-option-group {
+            padding: 10px 15px;
+            font-weight: bold;
+            font-style: italic;
+            color: #a0a0a0;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .search-engine-select option {
+            background: rgba(0, 0, 0, 0.9);
+            color: white;
+            border: none;
+        }
+
+        #search-input {
+            flex-grow: 1;
+            background: transparent;
+            border: none;
+            outline: none;
+            color: white;
+            font-size: 14px;
+            padding: 8px 12px;
+        }
+
+        #search-input::placeholder {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        #search-button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 15px 0 10px;
+        }
+
+        #search-button svg {
+            width: 20px;
+            height: 20px;
+            fill: white;
+            transition: transform 0.2s ease;
+        }
+        
+        #search-button:hover svg {
+            transform: scale(1.1);
+        }
+
+        #quick-links-container {
+
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-top: 1px; 
+            padding-bottom: 10px; 
+            width: 100%; 
+        }
+
+        .quick-link-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s ease-in-out;
+            position: relative;
+        }
+        
+        .quick-link-item a {
+           text-decoration: none;
+           color: white;
+           display: flex;
+           flex-direction: column;
+           align-items: center;
+        }
+
+        .quick-link-item:hover {
+            transform: translateY(-5px);
+        }
+
+        .quick-link-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            background-color: rgba(255, 255, 255, 0.15);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 6px;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+            cursor: pointer;
+        }
+
+        .quick-link-title {
+            font-size: 0.8rem;
+            text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.8);
+        }
+
+        .delete-link-button {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 20px;
+            height: 20px;
+            background-color: #ff4d4d;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 14px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.2s, transform 0.2s;
+            transform: scale(0.8);
+        }
+
+        .quick-link-item:hover .delete-link-button {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        #engine-select {
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+
+        #modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        #add-link-modal {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+        }
+        
+        #add-link-modal h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .modal-actions button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        #save-link-button {
+            background-color: #007bff;
+            color: white;
+        }
+        #save-link-button:hover {
+            background-color: #0056b3;
+        }
+
+        #cancel-link-button {
+            background-color: #f0f0f0;
+            color: #333;
+        }
+        #cancel-link-button:hover {
+            background-color: #ddd;
+        }
+
+        footer {
+            margin-top: 50px; /* Add some top margin to separate from quick links */
+            width: 100%;
+            font-size: 0.9rem;
+            color: white;
+            text-align: center;
+            text-shadow: 0px 0px 5px rgba(0, 0, 0, 0.8);
+        }
+
+        #weather-card {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 101;
+            background: rgba(30,30,30,0.7);
+            color: white;
+            border-radius: 15px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+            padding: 18px 28px 18px 28px;
+            min-width: 180px;
+            min-height: 60px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 8px;
+            font-size: 1.1rem;
+            transition: background 0.3s, opacity 0.3s;
+            opacity: 1;
+        }
+        #weather-card:hover {
+            background: rgba(30,30,30,0.2);
+            opacity: 0.5;
+        }
+        #weather-main {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        #weather-icon {
+            width: 36px;
+            height: 36px;
+        }
+        #weather-temp {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        #weather-city {
+            font-size: 1rem;
+            font-weight: bold;
+        }
+        #weather-time {
+            font-size: 1.2rem;
+            font-weight: bold;
+            letter-spacing: 0.05em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        /* 移除原时间组件样式 */
+        #time-container { display: none !important; }
+
+        .search-suggestions-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 5px;
+            border-radius: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+            display: none;
+        }
+
+        .search-suggestion-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .search-suggestion-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="wallpaper-bg"></div>
+    <div id="weather-card">
+        <div id="weather-main">
+            <img id="weather-icon" src="" alt="天气" style="display:none;">
+            <span id="weather-temp"></span>
+            <span id="weather-desc"></span>
+        </div>
+        <span id="weather-city"></span>
+        <span id="weather-time"></span>
+    </div>
+
+    <div id="flx-mail-link">
+        <a href="https://mail.feli.qzz.io" target="_blank">FLX Mail</a>
+    </div>
+
+    <div id="auth-container">
+        <div id="login-button">GitHub登录</div>
+        <div id="email-auth-container" class="hidden">
+            <input type="email" id="email-input" placeholder="输入你的邮箱" autocomplete="email">
+            <button id="send-otp-button">发送验证消息</button>
+            <input type="text" id="otp-input" placeholder="输入验证码" class="hidden" style="display:none;">
+            <button id="verify-otp-button" class="hidden" style="display:none;">验证并登录</button>
+        </div>
+        <div id="user-profile" class="hidden">
+            <img id="user-avatar" src="" alt="User Avatar">
+            <span id="user-name"></span>
+            <span id="admin-tag" class="hidden" style="background-color: #6A0DAD; color: #E0BBE4; padding: 4px 10px; border-radius: 15px; font-size: 0.7em; margin-left: 10px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);">超级管理员</span>
+            <div id="logout-button">登出</div>
+        </div>
+    </div>
+
+
+    <div id="modal-overlay">
+        <div id="add-link-modal">
+            <h2>添加快捷方式</h2>
+            <form id="add-link-form">
+                <div class="form-group">
+                    <label for="link-title">标题</label>
+                    <input type="text" id="link-title" required>
+                </div>
+                <div class="form-group">
+                    <label for="link-url">URL</label>
+                    <input type="url" id="link-url" placeholder="https://example.com" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" id="cancel-link-button">取消</button>
+                    <button type="submit" id="add-link-button">添加</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="search-section">
+            <h1>Hello! FLX</h1>
+            <div class="search-container">
+            <div id="custom-engine-select" class="custom-select-wrapper">
+                <div class="custom-select-trigger">
+                    <img id="selected-engine-icon" src="https://www.google.com/favicon.ico" alt="Selected Engine">
+                    <span class="arrow"></span>
+                </div>
+                <div class="custom-options">
+                </div>
+            </div>
+            <input type="text" id="search-input" placeholder="在 Web 中搜索...">
+            <button id="search-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--!Font Awesome Free 6.5.2 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free Copyright 2024 Fonticons, Inc.--><path d="M416 208c0 45.9-14.9 88.3-40 122.7L502.6 457.4c12.5 12.5 12.5 32.8 0 45.3s-32.8 12.5-45.3 0L330.7 376c-34.4 25.2-76.8 40-122.7 40C93.1 416 0 322.9 0 208S93.1 0 208 0S416 93.1 416 208zM208 352a144 144 0 1 0 0-288 144 144 0 1 0 0 288z"/></svg>
+            </button>
+            <div id="search-suggestions-container" class="search-suggestions-container"></div>
+            </div>
+        </div>
+        <div id="quick-links-container">
+        </div>
+
+
+
+        <footer>
+            <p>&copy; 2025 FELIX. All Rights Reserved.</p>
+            <a href="https://icp.gov.moe/?keyword=20252038" target="_blank">萌ICP备20252038</a>
+        </footer>
+    </div>
+
+    <script>
+
+        const supabaseUrl = 'https://jwcqpmkxwpufywxxzxrz.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp3Y3FwbWt4d3B1Znl3eHh6eHJ6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTU3Nzk4MjMsImV4cCI6MjA3MTM1NTgyM30.ogM_U93USIpCVoseqBo9zDk0ZQqcOwFjOrSvpepkU9A';
+        const supabaseClient = supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentUser = null;
+        let currentEngineUrl = '';
+
+
+        const engines = [
+            { name: 'Bing', url: 'https://www.bing.com/search?q=', icon: 'https://www.bing.com/favicon.ico' },
+            { name: 'Google', url: 'https://www.google.com/search?q=', icon: 'https://ts1.tc.mm.bing.net/th/id/ODF.cQGDzDdW-31GYqwCeCzTrw?w=32&h=32&qlt=93&pcl=fffffa&o=6&cb=thwsc4&pid=1.2' },
+            { name: 'Baidu', url: 'https://www.baidu.com/s?wd=', icon: 'https://www.baidu.com/favicon.ico' },
+            { name: 'DuckDuckGo', url: 'https://duckduckgo.com/?q=', icon: 'https://ts3.tc.mm.bing.net/th/id/ODF.VdzxfNRXv4WJKjdSeKyCsw?w=32&h=32&qlt=94&pcl=fffffa&o=6&cb=thwsc4&pid=1.2' }
+        ];
+
+
+        const loginButton = document.getElementById('login-button');
+        const userProfile = document.getElementById('user-profile');
+        const userAvatar = document.getElementById('user-avatar');
+        const userName = document.getElementById('user-name');
+        const logoutButton = document.getElementById('logout-button');
+
+        const emailAuthContainer = document.getElementById('email-auth-container');
+        const emailInput = document.getElementById('email-input');
+        const sendOtpButton = document.getElementById('send-otp-button');
+        const otpInput = document.getElementById('otp-input');
+        const verifyOtpButton = document.getElementById('verify-otp-button');
+        const quickLinksContainer = document.getElementById('quick-links-container');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const wallpaperDiv = document.getElementById('wallpaper-bg');
+        const modalOverlay = document.getElementById('modal-overlay');
+        const addLinkForm = document.getElementById('add-link-form');
+        const cancelLinkButton = document.getElementById('cancel-link-button');
+        const linkUrlInput = document.getElementById('link-url');
+        const customSelect = document.getElementById('custom-engine-select');
+        const selectedIcon = document.getElementById('selected-engine-icon');
+        const searchSuggestionsContainer = document.getElementById('search-suggestions-container');
+
+
+
+
+
+        async function updateUI(session) {
+            currentUser = session ? session.user : null;
+
+            if (currentUser) {
+                loginButton.classList.add('hidden');
+                userProfile.classList.remove('hidden');
+                emailAuthContainer.classList.add('hidden');
+                loginButton.classList.add('hidden');
+                userName.textContent = currentUser.user_metadata.user_name || currentUser.email;
+                if (currentUser.user_metadata.user_name) {
+                    userAvatar.src = currentUser.user_metadata.avatar_url;
+                userAvatar.classList.remove('hidden');
+            } else {
+                userAvatar.classList.add('hidden');
+            }
+
+            
+            const isAdmin = currentUser.email === 'felix@feli.qzz.io' || (currentUser.user_metadata && currentUser.user_metadata.user_name === 'flxteam');
+            if (isAdmin) {
+                console.log('Super Admin user logged in!');
+                document.getElementById('admin-tag').classList.remove('hidden');
+            } else {
+                console.log('Regular user logged in.');
+                document.getElementById('admin-tag').classList.add('hidden');
+            }
+                await loadUserData();
+            } else {
+                loginButton.classList.remove('hidden');
+                userProfile.classList.add('hidden');
+                emailAuthContainer.classList.remove('hidden');
+                loginButton.classList.remove('hidden');
+                quickLinksContainer.innerHTML = '<p style="color:white; text-shadow: 0 1px 2px #000;">请先登录以查看您的快捷链接。</p>';
+
+                currentEngineUrl = engines[0].url;
+                selectedIcon.src = engines[0].icon;
+            }
+        }
+
+        async function loadUserData() {
+            if (!currentUser) return;
+            await loadSettings();
+            await loadQuickLinks(); 
+        }
+
+        // --- Initialization ---
+        async function initialize() {
+            console.log('Initializing...');
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            updateUI(session);
+            
+
+            supabaseClient.auth.onAuthStateChange((event, session) => {
+                console.log('Auth state changed:', event);
+                updateUI(session);
+            });
+
+
+            loginButton.addEventListener('click', signInWithGitHub);
+            logoutButton.addEventListener('click', signOut);
+
+            sendOtpButton.addEventListener('click', sendOtp);
+            // verifyOtpButton.addEventListener('click', verifyOtp); // 移除此行
+            searchButton.addEventListener('click', performSearch);
+            searchInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    performSearch();
+                }
+            });
+
+            // Custom select dropdown for search engines
+            populateAndSetupEngines();
+
+
+            modalOverlay.addEventListener('click', (e) => {
+                if (e.target === modalOverlay) {
+                    closeAddLinkModal();
+                }
+            });
+            cancelLinkButton.addEventListener('click', closeAddLinkModal);
+            addLinkForm.addEventListener('submit', addQuickLink);
+
+
+            // 如果没有会话，加载 Bing 壁纸
+            if (!session) {
+                fetchBingWallpaper();
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', initialize);
+
+
+
+        async function signInWithGitHub() {
+            const { error } = await supabaseClient.auth.signInWithOAuth({ provider: 'github' });
+            if (error) console.error('Error signing in with GitHub:', error);
+        }
+
+        async function signOut() {
+            const { error } = await supabaseClient.auth.signOut();
+            if (error) {
+                console.error('Error signing out:', error);
+            } else {
+                updateUI(null);
+            }
+        }
+
+        async function sendOtp() {
+            const email = emailInput.value;
+            if (!email) {
+                alert('请输入邮箱地址！');
+                return;
+            }
+            const { error } = await supabaseClient.auth.signInWithOtp({ email });
+            if (error) {
+                console.error('发送验证消息失败:', error.message);
+                alert('发送验证消息失败: ' + error.message);
+            } else {
+                alert('验证消息已发送到您的邮箱，请查收，点击邮件中的链接即可验证成功！');
+                // 这里不再需要显示 OTP 输入框和验证按钮
+                // otpInput.classList.remove('hidden');
+                // verifyOtpButton.classList.remove('hidden');
+                // sendOtpButton.classList.add('hidden');
+            }
+        }
+
+        async function verifyOtp() {
+
+        }
+
+
+
+        async function loadQuickLinks() {
+            if (!currentUser) return;
+            quickLinksContainer.innerHTML = '';
+            const { data, error } = await supabaseClient.from('quick_links').select('id, title, url').eq('user_id', currentUser.id);
+            if (error) {
+                console.error('Error loading quick links:', error);
+                quickLinksContainer.innerHTML = '<p style="color:red;">加载快捷链接失败(っ °Д °;)っ</p>';
+            } else if (data) {
+                data.forEach(createQuickLinkElement);
+            }
+            createAddButtonElement();
+        }
+
+        async function addQuickLink(event) {
+            event.preventDefault();
+            if (!currentUser) return alert('请先登录！');
+            const title = document.getElementById('link-title').value.trim();
+            let url = linkUrlInput.value.trim();
+            if (!title || !url) return;
+            if (!/^https?:\/\//i.test(url)) {
+                url = 'https://' + url;
+            }
+            // 检查是否存在重复的快捷方式
+            const { data: existingLinks, error: existingError } = await supabaseClient
+                .from('quick_links')
+                .select('id')
+                .eq('user_id', currentUser.id)
+                .eq('url', url);
+
+            if (existingError) {
+                console.error('Error checking for existing quick links:', existingError);
+                alert('检查快捷方式失败，请稍后再试(っ °Д °;)っ');
+                return;
+            }
+
+            if (existingLinks && existingLinks.length > 0) {
+                // 如果存在重复，删除旧的重复项
+                const { error: deleteError } = await supabaseClient
+                    .from('quick_links')
+                    .delete()
+                    .in('id', existingLinks.map(link => link.id));
+
+                if (deleteError) {
+                    console.error('Error deleting existing quick links:', deleteError);
+                    alert('删除旧的快捷方式失败，请稍后再试(っ °Д °;)っ');
+                    return;
+                }
+                // 刷新快捷方式列表，移除旧的重复项
+                loadQuickLinks();
+            }
+
+            const { data, error } = await supabaseClient.from('quick_links').insert({ title, url, user_id: currentUser.id }).select().single();
+            if (error) {
+                console.error('Error adding quick link:', error);
+                alert('添加失败，请稍后再试(っ °Д °;)っ');
+
+            } else if (data) {
+                createQuickLinkElement(data);
+                const addButton = quickLinksContainer.querySelector('.add-button');
+                quickLinksContainer.appendChild(addButton);
+                closeAddLinkModal();
+            }
+        }
+
+        async function deleteQuickLink(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            if (!currentUser) return;
+            const linkWrapper = event.target.closest('.quick-link-item');
+            const linkId = linkWrapper.dataset.id;
+            if (!confirm('确定要删除这个快捷方式吗？')) return;
+            const { error } = await supabaseClient.from('quick_links').delete().eq('id', linkId);
+            if (error) {
+                console.error('Error deleting quick link:', error);
+                alert('删除失败，请稍后再试');
+            } else {
+                linkWrapper.remove();
+            }
+        }
+
+
+
+        async function loadSettings() {
+            if (!currentUser) return; // Settings are only for logged-in users
+
+            let { data, error } = await supabaseClient.from('settings').select('search_engine_url, wallpaper_url').eq('user_id', currentUser.id).single();
+
+            if (error && error.code !== 'PGRST116') { 
+                console.error('Error loading settings:', error);
+            }
+
+            let foundWallpaper = false;
+            if (data && data.wallpaper_url) {
+                wallpaperDiv.style.backgroundImage = `url('${data.wallpaper_url}')`;
+                foundWallpaper = true;
+            }
+
+            if (!foundWallpaper) {
+                // 如果没有保存壁纸设置，或者加载失败，使用默认壁纸
+                wallpaperDiv.style.backgroundImage = `url('${wallpapers[0]}')`;
+            }
+
+            let foundEngine = false;
+            if (data && data.search_engine_url) {
+                const savedEngine = engines.find(e => e.url === data.search_engine_url);
+                if (savedEngine) {
+                    currentEngineUrl = savedEngine.url;
+                    selectedIcon.src = savedEngine.icon;
+                    foundEngine = true;
+                }
+            }
+
+            if (!foundEngine) {
+                currentEngineUrl = engines[0].url;
+                selectedIcon.src = engines[0].icon;
+            }
+        }
+
+        async function saveSetting(key, value) {
+            if (!currentUser) return;
+            const { error } = await supabaseClient.from('settings').upsert({ user_id: currentUser.id, [key]: value }, { onConflict: 'user_id', ignoreDuplicates: false });
+            if (error) console.error(`Error saving ${key}:`, error);
+        }
+
+
+
+        function generateColorFromString(str) {
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = hash % 360;
+            return `hsla(${h}, 70%, 45%, 0.6)`;
+        }
+
+        function createQuickLinkElement(link) {
+            const linkWrapper = document.createElement('div');
+            linkWrapper.className = 'quick-link-item';
+            linkWrapper.dataset.id = link.id;
+            const linkElement = document.createElement('a');
+            linkElement.href = link.url;
+            linkElement.target = '_blank';
+            const iconElement = document.createElement('div');
+            iconElement.className = 'quick-link-icon';
+            const firstLetter = (link.title || '?').charAt(0).toUpperCase();
+            iconElement.textContent = firstLetter;
+            iconElement.style.backgroundColor = generateColorFromString(link.title || '');
+            iconElement.style.backdropFilter = 'blur(3px)';
+            iconElement.style.webkitBackdropFilter = 'blur(3px)';
+            iconElement.style.display = 'flex';
+            iconElement.style.alignItems = 'center';
+            iconElement.style.justifyContent = 'center';
+            iconElement.style.color = 'white';
+            iconElement.style.fontSize = '20px';
+            iconElement.style.fontWeight = 'bold';
+            iconElement.style.textShadow = '0 1px 1px rgba(0,0,0,0.2)';
+            const titleElement = document.createElement('span');
+            titleElement.className = 'quick-link-title';
+            titleElement.textContent = link.title;
+            linkElement.appendChild(iconElement);
+            linkElement.appendChild(titleElement);
+            const deleteButton = document.createElement('button');
+            deleteButton.className = 'delete-link-button';
+            deleteButton.textContent = '×';
+            deleteButton.addEventListener('click', deleteQuickLink);
+            linkWrapper.appendChild(linkElement);
+            linkWrapper.appendChild(deleteButton);
+            const addButton = quickLinksContainer.querySelector('.add-button');
+            if (addButton) {
+                quickLinksContainer.insertBefore(linkWrapper, addButton);
+            } else {
+                quickLinksContainer.appendChild(linkWrapper);
+            }
+        }
+
+        function createAddButtonElement() {
+            const existingButton = quickLinksContainer.querySelector('.add-button');
+            if (existingButton) existingButton.remove();
+            const addButton = document.createElement('div');
+            addButton.className = 'quick-link-item add-button';
+            addButton.style.cursor = 'pointer';
+            addButton.addEventListener('click', openAddLinkModal);
+            const addIcon = document.createElement('div');
+            addIcon.className = 'quick-link-icon';
+            addIcon.textContent = '+';
+            const addTitle = document.createElement('span');
+            addTitle.className = 'quick-link-title';
+            addTitle.textContent = '添加';
+            addButton.appendChild(addIcon);
+            addButton.appendChild(addTitle);
+            quickLinksContainer.appendChild(addButton);
+        }
+
+
+
+        function openAddLinkModal() {
+            modalOverlay.style.display = 'flex';
+        }
+
+        function closeAddLinkModal() {
+            modalOverlay.style.display = 'none';
+            addLinkForm.reset();
+        }
+
+        function performSearch() {
+            const query = searchInput.value.trim();
+            if (query && currentEngineUrl) {
+                const url = `${currentEngineUrl}${encodeURIComponent(query)}`;
+                window.open(url, '_blank');
+            }
+        }
+
+        async function fetchBingWallpaper() {
+            try {
+                const response = await fetch(`https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN`);
+                if (!response.ok) throw new Error('Bing API request failed');
+                const data = await response.json();
+                const wallpaperUrl = 'https://www.bing.com' + data.images[0].url;
+                const img = new Image();
+                img.onload = () => {
+                    wallpaperDiv.style.backgroundImage = `url('${wallpaperUrl}')`;
+                };
+                img.onerror = () => { 
+                    wallpaperDiv.style.backgroundColor = '#2c3e50';
+                };
+                img.src = wallpaperUrl;
+            } catch (error) {
+                console.error('Failed to fetch Bing wallpaper:', error);
+                wallpaperDiv.style.backgroundColor = '#2c3e50';
+            }
+        }
+
+        function populateAndSetupEngines() {
+            const optionsContainer = document.querySelector('.custom-options');
+            optionsContainer.innerHTML = ''; // Clear existing options
+            engines.forEach(engine => {
+                const option = document.createElement('div');
+                option.classList.add('custom-option');
+                option.dataset.url = engine.url;
+                const img = document.createElement('img');
+                img.src = engine.icon;
+                img.alt = engine.name;
+                const span = document.createElement('span');
+                span.textContent = engine.name;
+                option.appendChild(img);
+                option.appendChild(span);
+                optionsContainer.appendChild(option);
+
+                option.addEventListener('click', (event) => {
+                    event.stopPropagation(); // 阻止事件冒泡
+                    currentEngineUrl = engine.url;
+                    selectedIcon.src = engine.icon;
+                    customSelect.classList.remove('open');
+                    saveSetting('search_engine_url', engine.url);
+                });
+            });
+
+            customSelect.addEventListener('click', () => {
+                customSelect.classList.toggle('open');
+                
+
+                const optionsContainer = document.querySelector('.custom-options');
+                const viewportHeight = window.innerHeight;
+                const selectRect = customSelect.getBoundingClientRect();
+                
+
+                if (viewportHeight - selectRect.bottom < 300) {
+                    optionsContainer.style.left = '100%';
+                    optionsContainer.style.right = 'auto';
+                    optionsContainer.style.top = '0';
+                    optionsContainer.style.bottom = 'auto';
+                } else {
+    
+                    optionsContainer.style.left = '0';
+                    optionsContainer.style.right = 'auto';
+                    optionsContainer.style.top = 'calc(100% + 5px)';
+                    optionsContainer.style.bottom = 'auto';
+                }
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!customSelect.contains(event.target)) {
+                    customSelect.classList.remove('open');
+                }
+            });
+        }
+
+
+
+    </script>
+    <script>
+        var requestOptions = {
+            method: 'GET',
+            redirect: 'follow'
+        };
+
+        fetch("https://raw.onmicrosoft.cn/Bing-Wallpaper-Action/main/README.md", requestOptions)
+            .then(response => response.text())
+            .then(result => console.log(result))
+            .catch(error => console.log('error', error));
+    </script>
+<script>
+    // 天气和时间卡片逻辑
+    const weatherCard = document.getElementById('weather-card');
+    const weatherIcon = document.getElementById('weather-icon');
+    const weatherTemp = document.getElementById('weather-temp');
+    const weatherDesc = document.getElementById('weather-desc');
+    const weatherCity = document.getElementById('weather-city');
+    const weatherTime = document.getElementById('weather-time');
+
+    async function fetchWeatherAndTime() {
+        let city = '北京';
+        let lat = 39.9042;
+        let lon = 116.4074;
+        try {
+            // 优先尝试获取用户地理位置
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(async (pos) => {
+                    lat = pos.coords.latitude;
+                    lon = pos.coords.longitude;
+                    await updateWeather(lat, lon);
+                }, async () => {
+                    await updateWeather(lat, lon);
+                }, {timeout: 3000});
+            } else {
+                await updateWeather(lat, lon);
+            }
+        } catch {
+            await updateWeather(lat, lon);
+        }
+    }
+
+    async function updateWeather(lat, lon) {
+        try {
+            const apiKey = '31b96cda46f3e4e765ef05b59a9d5e59';
+            const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric&lang=zh_cn`;
+            const res = await fetch(url);
+            const data = await res.json();
+            if (data && data.weather && data.weather[0]) {
+                weatherIcon.src = `https://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`;
+                weatherIcon.style.display = 'inline-block';
+                weatherTemp.textContent = `${Math.round(data.main.temp)}°C`;
+                weatherDesc.textContent = data.weather[0].description;
+                weatherCity.textContent = data.name || '未知城市';
+            } else {
+                weatherIcon.style.display = 'none';
+                weatherTemp.textContent = '--';
+                weatherDesc.textContent = '天气获取失败';
+                weatherCity.textContent = '';
+            }
+        } catch (error) {
+            console.error('获取天气数据失败:', error);
+            weatherIcon.style.display = 'none';
+            weatherTemp.textContent = '--';
+            weatherDesc.textContent = '天气获取失败';
+            weatherCity.textContent = '';
+        }
+    }
+
+    let timeIntervalId = null;
+    function updateWeatherTime() {
+        if (timeIntervalId) {
+            clearInterval(timeIntervalId);
+        }
+        timeIntervalId = setInterval(() => {
+            weatherTime.textContent = new Date().toLocaleString('zh-CN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }, 1000);
+    }
+
+    fetchWeatherAndTime();
+    updateWeatherTime();
+    setInterval(updateWeatherTime, 60000);
+    // 每30分钟刷新一次天气
+    setInterval(fetchWeatherAndTime, 1800000);
+</script>
+<script src="script.js"></script>
+</body>
+</html>
